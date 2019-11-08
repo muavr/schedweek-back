@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 
 class Event(models.Model):
@@ -9,3 +10,7 @@ class Event(models.Model):
     description = models.TextField(verbose_name='description')
     created_ts = models.DateTimeField(verbose_name='created timestamp', auto_now_add=True)
     modified_ts = models.DateTimeField('modified timestamp', auto_now=True)
+
+    owner = models.ForeignKey(User, verbose_name='owner', related_name='events', on_delete=models.CASCADE)
+
+
