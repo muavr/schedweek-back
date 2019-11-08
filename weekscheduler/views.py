@@ -1,3 +1,11 @@
-from django.shortcuts import render
+from weekscheduler import models
+from weekscheduler import serializers
+from rest_framework.viewsets import ModelViewSet
 
-# Create your views here.
+
+class EventViewSet(ModelViewSet):
+    queryset = models.Event.objects.all()
+    serializer_class = serializers.EventHyperLinkedSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
