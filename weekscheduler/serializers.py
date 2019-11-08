@@ -8,4 +8,4 @@ class EventHyperLinkedSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = models.Event
-        fields = '__all__'
+        exclude = ['owner']

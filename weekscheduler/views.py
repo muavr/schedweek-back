@@ -7,3 +7,5 @@ class EventViewSet(ModelViewSet):
     queryset = models.Event.objects.all()
     serializer_class = serializers.EventHyperLinkedSerializer
 
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
