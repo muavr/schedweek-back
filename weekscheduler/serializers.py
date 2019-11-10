@@ -15,6 +15,7 @@ class EventHyperLinkedSerializer(serializers.HyperlinkedModelSerializer):
         finish_time = attrs['finish_time']
         if start_time >= finish_time:
             raise serializers.ValidationError(_('Starting time of event must be lesser than its finish time.'))
+        return attrs
 
     class Meta:
         model = models.Event
