@@ -32,4 +32,4 @@ class Event(models.Model):
 
     class Meta:
         ordering = ('day_of_week', 'start_time', 'finish_time', 'title',)
-        unique_together = ('owner', 'day_of_week', 'start_time', 'title')
+        unique_together = ('owner', 'day_of_week', 'start_time', 'title',)
