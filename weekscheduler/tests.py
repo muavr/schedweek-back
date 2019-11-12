@@ -99,3 +99,7 @@ class EventCreateAPIViewTestCase(APITestCase):
 
         response = self.client.get(self.url)
         self.assertEqual(len(json.loads(response.content)), Event.objects.filter(owner=another_user).count())
+
+        self.api_authentication()
+        response = self.client.get(self.url)
+        self.assertEqual(len(json.loads(response.content)), Event.objects.filter(owner=self.user).count())
