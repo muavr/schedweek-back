@@ -3,14 +3,16 @@ from weekscheduler.models import Event
 from django.contrib.auth.models import User
 from django.urls import reverse
 
-from rest_framework.test import APITestCase
+from rest_framework.test import APITestCase, APIRequestFactory
 from rest_framework_simplejwt.tokens import RefreshToken
+from weekscheduler.serializers import EventHyperLinkedSerializer
+from rest_framework.renderers import JSONRenderer
 
 
 class EventCreateAPIViewTestCase(APITestCase):
-    url = reverse("event-list")
 
     def setUp(self):
+        self.url = reverse("event-list")
         self.username = 'Boris'
         self.email = 'boris.email@example.com'
         self.password = 'boris_password'
@@ -103,3 +105,37 @@ class EventCreateAPIViewTestCase(APITestCase):
         self.api_authentication()
         response = self.client.get(self.url)
         self.assertEqual(len(json.loads(response.content)), Event.objects.filter(owner=self.user).count())
+
+
+class EventDetailAPIViewTestCase(APITestCase):
+
+    def setUp(self):
+        self.username = 'Boris'
+        self.email = 'boris.email@example.com'
+        self.password = 'boris_password'
+        self.user = User.objects.create_user(self.username, self.email, self.password)
+        self.event = Event.objects.create(**{
+            'title': 'Important Boris\'s task',
+            'description': 'Some informative description',
+            'day_of_week': 0,
+            'start_time': '10:00',
+            'finish_time': '10:15'
+        }, owner=self.user)
+        self.url = reverse('event-detail', kwargs={'pk': self.event.pk})
+        self.refresh = RefreshToken.for_user(self.user)
+        self.token = self.refresh.access_token
+        self.api_authentication()
+
+    def api_authentication(self):
+        self.client.credentials(HTTP_AUTHORIZATION='JWT ' + str(self.token))
+
+    def test_retrieve_event(self):
+        factory = APIRequestFactory()
+        fake_request = factory.get('/')
+        event_serializer_data = JSONRenderer().render(
+            EventHyperLinkedSerializer(instance=self.event, context={'request': fake_request}).data)
+
+        response = self.client.get(self.url)
+        response_event_data = response.content
+        self.assertEqual(event_serializer_data, response_event_data)
+
