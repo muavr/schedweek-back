@@ -1,10 +1,11 @@
 from weekscheduler import models
 from weekscheduler import serializers
-from rest_framework.viewsets import ModelViewSet
+from weekscheduler.permissions import IsEventOwner
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 
 
-class EventViewSet(ModelViewSet):
-    queryset = models.Event.objects.none()
+class EventListView(ListCreateAPIView):
     serializer_class = serializers.EventHyperLinkedSerializer
 
     def get_queryset(self):
@@ -12,4 +13,11 @@ class EventViewSet(ModelViewSet):
         if user:
             return models.Event.objects.filter(owner=user)
         return models.Event.objects.none()
+
+
+class EventDetailView(RetrieveUpdateDestroyAPIView):
+    queryset = models.Event.objects.all()
+    serializer_class = serializers.EventHyperLinkedSerializer
+    permission_classes = (IsAuthenticated, IsEventOwner)
+
 
