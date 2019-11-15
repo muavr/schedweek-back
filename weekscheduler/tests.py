@@ -1,12 +1,14 @@
 import json
-from weekscheduler.models import Event
-from django.contrib.auth.models import User
-from django.urls import reverse
 
-from rest_framework.test import APITestCase, APIRequestFactory
-from rest_framework_simplejwt.tokens import RefreshToken
+from weekscheduler.models import Event
 from weekscheduler.serializers import EventHyperLinkedSerializer
+
+from django.urls import reverse
+from django.contrib.auth.models import User
+
 from rest_framework.renderers import JSONRenderer
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.test import APITestCase, APIRequestFactory
 
 
 class EventCreateAPIViewTestCase(APITestCase):
@@ -138,4 +140,31 @@ class EventDetailAPIViewTestCase(APITestCase):
         response = self.client.get(self.url)
         response_event_data = response.content
         self.assertEqual(event_serializer_data, response_event_data)
+
+    def test_unauthorized_calls_by_other_user(self):
+        hacker = User.objects.create_user(username='hacker', password='password')
+        hacker_token = RefreshToken.for_user(hacker).access_token
+        self.client.credentials(HTTP_AUTHORIZATION='JWT ' + str(hacker_token))
+
+        # HTTP GET
+        response = self.client.get(self.url)
+        self.assertEqual(403, response.status_code)
+
+        # HTTP PUT
+        response = self.client.put(self.url, {
+            'title': 'Important Boris\'s task',
+            'description': 'Some informative description',
+            'day_of_week': 0,
+            'start_time': '10:00',
+            'finish_time': '10:30'
+        })
+        self.assertEqual(403, response.status_code)
+
+        # HTTP PATCH
+        response = self.client.patch(self.url, {'finish_time': '10:30'})
+        self.assertEqual(403, response.status_code)
+
+        # HTTP DELETE
+        response = self.client.delete(self.url)
+        self.assertEqual(403, response.status_code)
 
