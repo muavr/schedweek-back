@@ -168,3 +168,8 @@ class EventDetailAPIViewTestCase(APITestCase):
         response = self.client.delete(self.url)
         self.assertEqual(403, response.status_code)
 
+    def test_remove_event(self):
+        response = self.client.delete(self.url)
+        event = Event.objects.filter(pk=self.event.id)
+        self.assertEqual(0, len(event))
+        self.assertEqual(204, response.status_code)
