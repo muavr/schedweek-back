@@ -11,10 +11,9 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.test import APITestCase, APIRequestFactory
 
 
-class EventCreateAPIViewTestCase(APITestCase):
+class EventAPITestCase(APITestCase):
 
     def setUp(self):
-        self.url = reverse("event-list")
         self.username = 'Boris'
         self.email = 'boris.email@example.com'
         self.password = 'boris_password'
@@ -25,6 +24,20 @@ class EventCreateAPIViewTestCase(APITestCase):
 
     def api_authentication(self):
         self.client.credentials(HTTP_AUTHORIZATION='JWT ' + str(self.token))
+
+    @staticmethod
+    def get_serialized_event(event):
+        factory = APIRequestFactory()
+        fake_request = factory.get('/')
+        return JSONRenderer().render(
+            EventHyperLinkedSerializer(instance=event, context={'request': fake_request}).data)
+
+
+class EventCreateAPIViewTestCase(EventAPITestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.url = reverse("event-list")
 
     def test_create_valid_event(self):
         response = self.client.post(self.url, {
@@ -109,13 +122,10 @@ class EventCreateAPIViewTestCase(APITestCase):
         self.assertEqual(len(json.loads(response.content)), Event.objects.filter(owner=self.user).count())
 
 
-class EventDetailAPIViewTestCase(APITestCase):
+class EventDetailAPIViewTestCase(EventAPITestCase):
 
     def setUp(self):
-        self.username = 'Boris'
-        self.email = 'boris.email@example.com'
-        self.password = 'boris_password'
-        self.user = User.objects.create_user(self.username, self.email, self.password)
+        super().setUp()
         self.event = Event.objects.create(**{
             'title': 'Important Boris\'s task',
             'description': 'Some informative description',
@@ -124,22 +134,13 @@ class EventDetailAPIViewTestCase(APITestCase):
             'finish_time': '10:15'
         }, owner=self.user)
         self.url = reverse('event-detail', kwargs={'pk': self.event.pk})
-        self.refresh = RefreshToken.for_user(self.user)
-        self.token = self.refresh.access_token
-        self.api_authentication()
-
-    def api_authentication(self):
-        self.client.credentials(HTTP_AUTHORIZATION='JWT ' + str(self.token))
 
     def test_retrieve_event(self):
-        factory = APIRequestFactory()
-        fake_request = factory.get('/')
-        event_serializer_data = JSONRenderer().render(
-            EventHyperLinkedSerializer(instance=self.event, context={'request': fake_request}).data)
+        serializer_event_data = self.get_serialized_event(self.event)
 
         response = self.client.get(self.url)
         response_event_data = response.content
-        self.assertEqual(event_serializer_data, response_event_data)
+        self.assertEqual(serializer_event_data, response_event_data)
 
     def test_unauthorized_calls_by_other_user(self):
         hacker = User.objects.create_user(username='hacker', password='password')
@@ -167,6 +168,45 @@ class EventDetailAPIViewTestCase(APITestCase):
         # HTTP DELETE
         response = self.client.delete(self.url)
         self.assertEqual(403, response.status_code)
+
+    def test_update_event(self):
+        response = self.client.put(self.url, {
+            'title': 'Not important Boris\'s task',
+            'description': 'Some none-informative description',
+            'day_of_week': 1,
+            'start_time': '10:10',
+            'finish_time': '10:30'
+        })
+        response_event_data = response.content
+
+        event = Event.objects.get(pk=self.event.id)
+        serializer_event_data = self.get_serialized_event(event)
+
+        self.assertEqual(response_event_data, serializer_event_data)
+        self.assertEqual(200, response.status_code)
+
+    def test_partial_update_event(self):
+        response = self.client.patch(self.url, {
+            'finish_time': '10:30'
+        })
+        response_event_data = response.content
+
+        event = Event.objects.get(pk=self.event.id)
+        serializer_event_data = self.get_serialized_event(event)
+
+        self.assertEqual(response_event_data, serializer_event_data)
+        self.assertEqual(200, response.status_code)
+
+    def test_partial_update_event_in_case_wrong_time_interval(self):
+        response = self.client.patch(self.url, {
+            'start_time': '10:16'
+        })
+        self.assertEqual(400, response.status_code)
+
+        response = self.client.patch(self.url, {
+            'finish_time': '9:00'
+        })
+        self.assertEqual(400, response.status_code)
 
     def test_remove_event(self):
         response = self.client.delete(self.url)
