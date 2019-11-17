@@ -9,10 +9,7 @@ class EventListView(ListCreateAPIView):
     serializer_class = serializers.EventHyperLinkedSerializer
 
     def get_queryset(self):
-        user = self.request.user
-        if user:
-            return models.Event.objects.filter(owner=user)
-        return models.Event.objects.none()
+        return models.Event.objects.filter(owner=self.request.user)
 
 
 class EventDetailView(RetrieveUpdateDestroyAPIView):
